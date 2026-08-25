@@ -69,7 +69,7 @@ Draft copy, pending Yurii's line-by-line review:
 The five most recent posts from the personal blog, with dates. This is the
 only block automation may touch.
 
-### 5. Contact (static)
+### 5. Contact / "Elsewhere" (static) — implemented heading is "## Elsewhere"
 
 Website primary and visually dominant, everything else secondary:
 

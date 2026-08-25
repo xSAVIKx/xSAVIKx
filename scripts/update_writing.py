@@ -9,6 +9,7 @@ import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from collections import namedtuple
+from datetime import timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
@@ -16,6 +17,7 @@ START_MARKER = "<!-- posts start -->"
 END_MARKER = "<!-- posts end -->"
 
 POST_LIMIT = 5
+MAX_FEED_BYTES = 5 * 1024 * 1024
 
 MONTHS = (
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -34,11 +36,9 @@ def replace_block(text: str, start: str, end: str, new_content: str) -> str:
     start_index = text.find(start)
     if start_index == -1:
         raise ValueError(f"start marker not found: {start}")
-    end_index = text.find(end)
+    end_index = text.find(end, start_index + len(start))
     if end_index == -1:
-        raise ValueError(f"end marker not found: {end}")
-    if end_index < start_index:
-        raise ValueError("end marker appears before start marker")
+        raise ValueError(f"end marker not found after start marker: {end}")
     head = text[: start_index + len(start)]
     tail = text[end_index:]
     return f"{head}\n{new_content}\n{tail}"
@@ -54,9 +54,10 @@ def parse_feed(xml_bytes: bytes, limit: int = POST_LIMIT) -> list:
         pub_date = item.findtext("pubDate")
         if not (title and link and pub_date):
             continue
-        posts.append(
-            Post(title.strip(), link.strip(), parsedate_to_datetime(pub_date))
-        )
+        date = parsedate_to_datetime(pub_date)
+        if date.tzinfo is None:
+            date = date.replace(tzinfo=timezone.utc)
+        posts.append(Post(title.strip(), link.strip(), date))
     if not posts:
         raise ValueError("feed contained no usable items")
     posts.sort(key=lambda post: post.date, reverse=True)
@@ -69,7 +70,10 @@ def render(posts: list) -> str:
     for post in posts:
         month = MONTHS[post.date.month - 1]
         stamp = f"{post.date.day} {month} {post.date.year}"
-        lines.append(f"- [{post.title}]({post.url}) — {stamp}")
+        title = " ".join(post.title.split())
+        title = title.replace("[", "\\[").replace("]", "\\]")
+        url = post.url.replace("(", "%28").replace(")", "%29")
+        lines.append(f"- [{title}]({url}) — {stamp}")
     return "\n".join(lines)
 
 
@@ -80,7 +84,7 @@ def fetch(url: str, timeout: int = TIMEOUT_SECONDS, retries: int = 1) -> bytes:
         request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
-                return response.read()
+                return response.read(MAX_FEED_BYTES)
         except (urllib.error.URLError, OSError) as error:
             last_error = error
     raise RuntimeError(f"failed to fetch {url}: {last_error}")

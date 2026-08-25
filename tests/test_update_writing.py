@@ -4,6 +4,7 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 from contextlib import redirect_stdout
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -116,6 +117,31 @@ class TestParseFeed(unittest.TestCase):
         with self.assertRaises(ET.ParseError):
             uw.parse_feed(b"<rss><channel><item>unclosed")
 
+    def test_normalizes_unknown_offset_pubdate_and_sorts_with_aware_dates(self):
+        feed = b"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>x</title>
+    <item>
+      <title>Naive date post</title>
+      <link>https://example.test/naive/</link>
+      <pubDate>Fri, 21 Aug 2026 00:00:00 -0000</pubDate>
+    </item>
+    <item>
+      <title>Aware date post</title>
+      <link>https://example.test/aware/</link>
+      <pubDate>Sat, 22 Aug 2026 00:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
+"""
+        posts = uw.parse_feed(feed)
+        self.assertEqual(
+            [p.title for p in posts], ["Aware date post", "Naive date post"]
+        )
+        self.assertIsNotNone(posts[1].date.tzinfo)
+        self.assertEqual(posts[1].date.utcoffset().total_seconds(), 0)
+
 
 class TestRender(unittest.TestCase):
     def test_renders_one_line_per_post(self):
@@ -139,6 +165,43 @@ class TestRender(unittest.TestCase):
         rendered = uw.render(uw.parse_feed(MINIMAL_FEED))
         self.assertFalse(rendered.endswith("\n"))
 
+    def test_escapes_brackets_in_title(self):
+        post = uw.Post(
+            "Why [brackets] break (links)",
+            "https://example.test/a/",
+            datetime(2026, 8, 21, tzinfo=timezone.utc),
+        )
+        rendered = uw.render([post])
+        self.assertEqual(
+            rendered,
+            "- [Why \\[brackets\\] break (links)](https://example.test/a/) — 21 Aug 2026",
+        )
+
+    def test_percent_encodes_parens_in_url(self):
+        post = uw.Post(
+            "Title",
+            "https://x.dev/a_(b)/",
+            datetime(2026, 8, 21, tzinfo=timezone.utc),
+        )
+        rendered = uw.render([post])
+        self.assertEqual(
+            rendered,
+            "- [Title](https://x.dev/a_%28b%29/) — 21 Aug 2026",
+        )
+
+    def test_collapses_multiline_title_to_single_line(self):
+        post = uw.Post(
+            "Line one\nLine two",
+            "https://example.test/b/",
+            datetime(2026, 8, 21, tzinfo=timezone.utc),
+        )
+        rendered = uw.render([post])
+        self.assertEqual(
+            rendered,
+            "- [Line one Line two](https://example.test/b/) — 21 Aug 2026",
+        )
+        self.assertEqual(len(rendered.splitlines()), 1)
+
 
 README_TEMPLATE = "# Title\n\n## Writing\n\n<!-- posts start -->\nstale\n<!-- posts end -->\n\n## Elsewhere\n"
 
@@ -149,6 +212,21 @@ class TestFetch(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 uw.fetch("https://example.invalid/feed.xml")
         self.assertEqual(opener.call_count, 2)
+
+    def test_returns_body_and_passes_timeout_to_urlopen(self):
+        response = mock.MagicMock()
+        response.__enter__.return_value = response
+        response.__exit__.return_value = False
+        response.read.return_value = b"<rss>ok</rss>"
+        with mock.patch.object(
+            uw.urllib.request, "urlopen", return_value=response
+        ) as opener:
+            result = uw.fetch("https://example.test/feed.xml", timeout=7)
+        self.assertEqual(result, b"<rss>ok</rss>")
+        self.assertEqual(opener.call_count, 1)
+        _, kwargs = opener.call_args
+        self.assertEqual(kwargs.get("timeout"), 7)
+        response.read.assert_called_once_with(uw.MAX_FEED_BYTES)
 
 
 class TestMain(unittest.TestCase):
@@ -204,6 +282,20 @@ class TestMain(unittest.TestCase):
             uw.main(["--readme", str(readme)])
             second = readme.read_text(encoding="utf-8")
         self.assertEqual(first, second)
+
+    def test_passes_feed_url_argument_to_fetch(self):
+        readme = self._readme()
+        with mock.patch.object(uw, "fetch", return_value=MINIMAL_FEED) as fetch_mock:
+            exit_code = uw.main(
+                [
+                    "--readme",
+                    str(readme),
+                    "--feed-url",
+                    "https://example.test/other.xml",
+                ]
+            )
+        self.assertEqual(exit_code, 0)
+        fetch_mock.assert_called_once_with("https://example.test/other.xml")
 
 
 if __name__ == "__main__":
