@@ -1,7 +1,11 @@
+import io
 import sys
+import tempfile
 import unittest
 import xml.etree.ElementTree as ET
+from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
@@ -134,6 +138,72 @@ class TestRender(unittest.TestCase):
     def test_has_no_trailing_newline(self):
         rendered = uw.render(uw.parse_feed(MINIMAL_FEED))
         self.assertFalse(rendered.endswith("\n"))
+
+
+README_TEMPLATE = "# Title\n\n## Writing\n\n<!-- posts start -->\nstale\n<!-- posts end -->\n\n## Elsewhere\n"
+
+
+class TestFetch(unittest.TestCase):
+    def test_retries_once_then_raises(self):
+        with mock.patch.object(uw.urllib.request, "urlopen", side_effect=OSError("boom")) as opener:
+            with self.assertRaises(RuntimeError):
+                uw.fetch("https://example.invalid/feed.xml")
+        self.assertEqual(opener.call_count, 2)
+
+
+class TestMain(unittest.TestCase):
+    def _readme(self, text=README_TEMPLATE):
+        handle = tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8")
+        handle.write(text)
+        handle.close()
+        return Path(handle.name)
+
+    def test_writes_rendered_block_into_readme(self):
+        readme = self._readme()
+        with mock.patch.object(uw, "fetch", return_value=MINIMAL_FEED):
+            exit_code = uw.main(["--readme", str(readme)])
+        self.assertEqual(exit_code, 0)
+        text = readme.read_text(encoding="utf-8")
+        self.assertIn("- [Newer post](https://serhiichuk.dev/blog/newer/) — 21 Aug 2026", text)
+        self.assertNotIn("stale", text)
+        self.assertIn("## Elsewhere", text)
+
+    def test_leaves_readme_untouched_when_fetch_fails(self):
+        readme = self._readme()
+        original = readme.read_text(encoding="utf-8")
+        with mock.patch.object(uw, "fetch", side_effect=RuntimeError("network down")):
+            exit_code = uw.main(["--readme", str(readme)])
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(readme.read_text(encoding="utf-8"), original)
+
+    def test_leaves_readme_untouched_when_feed_is_empty(self):
+        readme = self._readme()
+        original = readme.read_text(encoding="utf-8")
+        empty = b'<?xml version="1.0"?><rss version="2.0"><channel><title>x</title></channel></rss>'
+        with mock.patch.object(uw, "fetch", return_value=empty):
+            exit_code = uw.main(["--readme", str(readme)])
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(readme.read_text(encoding="utf-8"), original)
+
+    def test_dry_run_prints_block_and_does_not_write(self):
+        readme = self._readme()
+        original = readme.read_text(encoding="utf-8")
+        buffer = io.StringIO()
+        with mock.patch.object(uw, "fetch", return_value=MINIMAL_FEED):
+            with redirect_stdout(buffer):
+                exit_code = uw.main(["--readme", str(readme), "--dry-run"])
+        self.assertEqual(exit_code, 0)
+        self.assertIn("- [Newer post]", buffer.getvalue())
+        self.assertEqual(readme.read_text(encoding="utf-8"), original)
+
+    def test_is_idempotent_across_runs(self):
+        readme = self._readme()
+        with mock.patch.object(uw, "fetch", return_value=MINIMAL_FEED):
+            uw.main(["--readme", str(readme)])
+            first = readme.read_text(encoding="utf-8")
+            uw.main(["--readme", str(readme)])
+            second = readme.read_text(encoding="utf-8")
+        self.assertEqual(first, second)
 
 
 if __name__ == "__main__":
