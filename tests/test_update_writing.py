@@ -1,5 +1,6 @@
 import sys
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
@@ -46,6 +47,70 @@ class TestReplaceBlock(unittest.TestCase):
         text = "<!-- posts end -->\nmiddle\n<!-- posts start -->\n"
         with self.assertRaises(ValueError):
             uw.replace_block(text, uw.START_MARKER, uw.END_MARKER, "new")
+
+
+MINIMAL_FEED = b"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Yurii Serhiichuk - Blog</title>
+    <item>
+      <title>Older post</title>
+      <link>https://serhiichuk.dev/blog/older/</link>
+      <pubDate>Thu, 09 Jul 2026 00:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Newer post</title>
+      <link>https://serhiichuk.dev/blog/newer/</link>
+      <pubDate>Fri, 21 Aug 2026 00:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
+"""
+
+FIXTURE_PATH = Path(__file__).resolve().parent / "fixtures" / "blog-rss.xml"
+
+
+class TestParseFeed(unittest.TestCase):
+    def test_extracts_title_and_url(self):
+        posts = uw.parse_feed(MINIMAL_FEED)
+        self.assertEqual(posts[0].title, "Newer post")
+        self.assertEqual(posts[0].url, "https://serhiichuk.dev/blog/newer/")
+
+    def test_sorts_newest_first_regardless_of_feed_order(self):
+        posts = uw.parse_feed(MINIMAL_FEED)
+        self.assertEqual([p.title for p in posts], ["Newer post", "Older post"])
+
+    def test_parses_rfc_2822_date_as_timezone_aware(self):
+        posts = uw.parse_feed(MINIMAL_FEED)
+        newest = posts[0].date
+        self.assertEqual((newest.year, newest.month, newest.day), (2026, 8, 21))
+        self.assertIsNotNone(newest.tzinfo)
+
+    def test_respects_limit(self):
+        self.assertEqual(len(uw.parse_feed(MINIMAL_FEED, limit=1)), 1)
+
+    def test_returns_all_items_when_fewer_than_limit(self):
+        posts = uw.parse_feed(MINIMAL_FEED, limit=5)
+        self.assertEqual(len(posts), 2)
+
+    def test_parses_the_real_captured_feed(self):
+        posts = uw.parse_feed(FIXTURE_PATH.read_bytes())
+        self.assertEqual(len(posts), uw.POST_LIMIT)
+        for post in posts:
+            self.assertTrue(post.title)
+            self.assertTrue(post.url.startswith("https://"))
+            self.assertIsNotNone(post.date.tzinfo)
+        dates = [p.date for p in posts]
+        self.assertEqual(dates, sorted(dates, reverse=True))
+
+    def test_raises_on_feed_with_no_items(self):
+        empty = b'<?xml version="1.0"?><rss version="2.0"><channel><title>x</title></channel></rss>'
+        with self.assertRaises(ValueError):
+            uw.parse_feed(empty)
+
+    def test_raises_on_malformed_xml(self):
+        with self.assertRaises(ET.ParseError):
+            uw.parse_feed(b"<rss><channel><item>unclosed")
 
 
 if __name__ == "__main__":
