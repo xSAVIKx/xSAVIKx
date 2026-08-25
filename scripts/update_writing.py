@@ -12,6 +12,11 @@ END_MARKER = "<!-- posts end -->"
 
 POST_LIMIT = 5
 
+MONTHS = (
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+)
+
 Post = namedtuple("Post", ["title", "url", "date"])
 
 
@@ -47,3 +52,13 @@ def parse_feed(xml_bytes: bytes, limit: int = POST_LIMIT) -> list:
         raise ValueError("feed contained no usable items")
     posts.sort(key=lambda post: post.date, reverse=True)
     return posts[:limit]
+
+
+def render(posts: list) -> str:
+    """Render Post records as a markdown list, one line each."""
+    lines = []
+    for post in posts:
+        month = MONTHS[post.date.month - 1]
+        stamp = f"{post.date.day} {month} {post.date.year}"
+        lines.append(f"- [{post.title}]({post.url}) — {stamp}")
+    return "\n".join(lines)

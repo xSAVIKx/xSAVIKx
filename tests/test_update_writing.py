@@ -113,5 +113,28 @@ class TestParseFeed(unittest.TestCase):
             uw.parse_feed(b"<rss><channel><item>unclosed")
 
 
+class TestRender(unittest.TestCase):
+    def test_renders_one_line_per_post(self):
+        rendered = uw.render(uw.parse_feed(MINIMAL_FEED))
+        self.assertEqual(len(rendered.splitlines()), 2)
+
+    def test_line_format_matches_spec(self):
+        posts = uw.parse_feed(MINIMAL_FEED)
+        rendered = uw.render(posts)
+        self.assertEqual(
+            rendered.splitlines()[0],
+            "- [Newer post](https://serhiichuk.dev/blog/newer/) — 21 Aug 2026",
+        )
+
+    def test_day_has_no_leading_zero(self):
+        rendered = uw.render(uw.parse_feed(MINIMAL_FEED))
+        self.assertIn("— 9 Jul 2026", rendered)
+        self.assertNotIn("09 Jul", rendered)
+
+    def test_has_no_trailing_newline(self):
+        rendered = uw.render(uw.parse_feed(MINIMAL_FEED))
+        self.assertFalse(rendered.endswith("\n"))
+
+
 if __name__ == "__main__":
     unittest.main()
