@@ -11,7 +11,7 @@ I make cloud infrastructure cheaper and less exciting to operate. Lately: agents
 
 **[okf-skills](https://github.com/xSAVIKx/okf-skills)** — Open Knowledge Format: your data's structure as a portable, versioned map, as code.
 
-**[cloudevents/sdk-python](https://github.com/cloudevents/sdk-python)** — Top contributor to the Python SDK for the CNCF CloudEvents spec.
+**[cloudevents/sdk-python](https://github.com/cloudevents/sdk-python)** — Maintainer of the Python SDK for the CNCF CloudEvents spec.
 
 **[AndroidScreencast](https://github.com/xSAVIKx/AndroidScreencast)** — Display and control Android devices from your desktop.
 
