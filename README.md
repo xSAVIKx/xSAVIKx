@@ -11,6 +11,8 @@ I'm the first SRE at [DualEntry](https://github.com/dualentry), and before that 
 
 **[aws-emulator-docker](https://github.com/xSAVIKx/aws-emulator-docker)** — The AWS Emulator as a signed multi-arch container image, because AWS doesn't publish one. There's a [GitHub Action](https://github.com/xSAVIKx/run-aws-emulator) to run it in CI.
 
+**[cloud-cache-action](https://github.com/xSAVIKx/cloud-cache-action)** — A drop-in replacement for `actions/cache` that keeps your CI caches in any S3-compatible bucket: AWS S3, Cloudflare R2, MinIO.
+
 **[sre-agent](https://github.com/xSAVIKx/sre-agent)** — A demo and workshop project. A multi-agent SRE setup on Google ADK that finds the slow span in your traces, correlates logs and metrics and writes the post-mortem.
 
 **[cloudevents/sdk-python](https://github.com/cloudevents/sdk-python)** — I'm one of the maintainers of the Python SDK for the CNCF CloudEvents spec.
