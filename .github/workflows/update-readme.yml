@@ -58,7 +58,9 @@ jobs:
           git commit -m "chore: refresh writing block"
           git push
 
+      # Only a run with the real feed proves that the refresh works again.
       - name: Close the failure issue
+        if: inputs.feed_url == ''
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -71,6 +73,8 @@ jobs:
 
   # A failed run opens one issue, so that GitHub notifies the owner. Later
   # failures add a comment to that issue. The next good run closes it.
+  # A test run with a bad feed_url also opens the issue. This is on purpose:
+  # it is the only way to test the alert.
   alert:
     needs: update
     if: failure()
