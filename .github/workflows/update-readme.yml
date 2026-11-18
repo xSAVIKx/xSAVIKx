@@ -4,12 +4,18 @@ on:
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
+    inputs:
+      feed_url:
+        description: "Feed URL to use instead of the default (for tests)"
+        required: false
+        default: ""
   push:
     branches: [main]
 
 permissions:
   contents: write
   actions: write
+  issues: write
 
 concurrency:
   group: update-readme
@@ -34,7 +40,9 @@ jobs:
         run: python3 -m unittest discover -s tests -v
 
       - name: Refresh writing block
-        run: python3 scripts/update_writing.py
+        env:
+          FEED_URL: ${{ inputs.feed_url }}
+        run: python3 scripts/update_writing.py ${FEED_URL:+--feed-url "$FEED_URL"}
 
       - name: Commit if changed
         run: |
@@ -47,3 +55,40 @@ jobs:
           git add README.md
           git commit -m "chore: refresh writing block"
           git push
+
+      - name: Close the failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue list --state open --label refresh-failure --json number --jq '.[].number' |
+            while read -r number; do
+              gh issue close "$number" --comment "The refresh works again: $RUN_URL"
+            done
+
+  # A failed run opens one issue, so that GitHub notifies the owner. Later
+  # failures add a comment to that issue. The next good run closes it.
+  alert:
+    needs: update
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open or update the failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create refresh-failure --color B60205 \
+            --description "The README refresh workflow failed" 2>/dev/null || true
+          number=$(gh issue list --state open --label refresh-failure --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "The refresh failed again: $RUN_URL"
+          else
+            gh issue create --label refresh-failure \
+              --title "README refresh is failing" \
+              --body "The Update README workflow failed: $RUN_URL
+
+          The Writing block in the README does not change until the next good run. That run closes this issue."
+          fi
