@@ -1,6 +1,6 @@
 # Yurii Serhiichuk
 
-Cloud architecture and DevOps.  
+Site reliability and cloud architecture.  
 Google Developer Expert, Cloud.
 
 I make cloud infrastructure cheaper and less exciting to operate. Lately: agents that run production systems, and portable knowledge formats for LLM tooling.
@@ -10,6 +10,8 @@ I make cloud infrastructure cheaper and less exciting to operate. Lately: agents
 **[sre-agent](https://github.com/xSAVIKx/sre-agent)** — Multi-agent SRE platform: agents that triage and act on production incidents.
 
 **[okf-skills](https://github.com/xSAVIKx/okf-skills)** — Open Knowledge Format: your data's structure as a portable, versioned map, as code.
+
+**[aws-emulator-docker](https://github.com/xSAVIKx/aws-emulator-docker)** — The AWS Emulator as a signed, multi-arch container image, with a [GitHub Action](https://github.com/xSAVIKx/run-aws-emulator) to run it in CI.
 
 **[cloudevents/sdk-python](https://github.com/cloudevents/sdk-python)** — Maintainer of the Python SDK for the CNCF CloudEvents spec.
 
