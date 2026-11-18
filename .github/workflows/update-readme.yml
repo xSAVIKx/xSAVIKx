@@ -44,7 +44,9 @@ jobs:
           FEED_URL: ${{ inputs.feed_url }}
         run: python3 scripts/update_writing.py ${FEED_URL:+--feed-url "$FEED_URL"}
 
+      # A test run with another feed must not change the live README.
       - name: Commit if changed
+        if: inputs.feed_url == ''
         run: |
           if git diff --quiet -- README.md; then
             echo "No changes to commit."
