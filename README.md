@@ -3,19 +3,19 @@
 Site reliability and cloud architecture.  
 Google Developer Expert, Cloud.
 
-I make cloud infrastructure cheaper and less exciting to operate. Lately: agents that run production systems, and portable knowledge formats for LLM tooling.
+I'm the first SRE at [DualEntry](https://github.com/dualentry), and before that I was Head of DevOps at Travelshift. I make cloud infrastructure cheaper and less exciting to operate. Most of what I publish here lately is tooling for CI and for AI agents.
 
 ## Selected work
 
-**[sre-agent](https://github.com/xSAVIKx/sre-agent)** — Multi-agent SRE platform: agents that triage and act on production incidents.
+**[okf-skills](https://github.com/xSAVIKx/okf-skills)** — Connectors that turn the structure your data already has (schemas, foreign keys, file trees, commit history) into an Open Knowledge Format catalog your agent can read.
 
-**[okf-skills](https://github.com/xSAVIKx/okf-skills)** — Open Knowledge Format: your data's structure as a portable, versioned map, as code.
+**[aws-emulator-docker](https://github.com/xSAVIKx/aws-emulator-docker)** — The AWS Emulator as a signed multi-arch container image, because AWS doesn't publish one. There's a [GitHub Action](https://github.com/xSAVIKx/run-aws-emulator) to run it in CI.
 
-**[aws-emulator-docker](https://github.com/xSAVIKx/aws-emulator-docker)** — The AWS Emulator as a signed, multi-arch container image, with a [GitHub Action](https://github.com/xSAVIKx/run-aws-emulator) to run it in CI.
+**[sre-agent](https://github.com/xSAVIKx/sre-agent)** — A demo and workshop project. A multi-agent SRE setup on Google ADK that finds the slow span in your traces, correlates logs and metrics and writes the post-mortem.
 
-**[cloudevents/sdk-python](https://github.com/cloudevents/sdk-python)** — Maintainer of the Python SDK for the CNCF CloudEvents spec.
+**[cloudevents/sdk-python](https://github.com/cloudevents/sdk-python)** — I'm one of the maintainers of the Python SDK for the CNCF CloudEvents spec.
 
-**[AndroidScreencast](https://github.com/xSAVIKx/AndroidScreencast)** — Display and control Android devices from your desktop.
+**[AndroidScreencast](https://github.com/xSAVIKx/AndroidScreencast)** — View and control an Android device from your desktop. On GitHub since 2014.
 
 ## Writing
 
@@ -32,3 +32,5 @@ I make cloud infrastructure cheaper and less exciting to operate. Lately: agents
 **[serhiichuk.dev](https://serhiichuk.dev)** — best place to reach me
 
 [LinkedIn](https://linkedin.com/in/YuriiSerhiichuk) · [X](https://x.com/xSAVIKx) · [Sessionize](https://sessionize.com/yuriiserhiichuk) · [dev.to](https://dev.to/xsavikx) · [Medium](https://xsavikx.medium.com/)
+
+My commits from 2017 to 2021 are under an older account, [yuri-sergiichuk](https://github.com/yuri-sergiichuk), mostly in [SpineEventEngine](https://github.com/SpineEventEngine).
